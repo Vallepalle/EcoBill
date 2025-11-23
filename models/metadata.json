@@ -1,0 +1,54 @@
+{
+  "feature_names": [
+    "city",
+    "state",
+    "house_type",
+    "month",
+    "avg_temp_f",
+    "humidity",
+    "heating_degree_days",
+    "cooling_degree_days",
+    "avg_energy_kwh",
+    "square_feet",
+    "num_occupants",
+    "energy_rate_per_kwh",
+    "month_sin",
+    "month_cos",
+    "kwh_per_occupant",
+    "kwh_per_sqft",
+    "is_extreme_cold",
+    "is_extreme_hot",
+    "total_degree_days",
+    "estimated_cost"
+  ],
+  "categorical_features": [
+    "city",
+    "state",
+    "house_type"
+  ],
+  "numerical_features": [
+    "month",
+    "avg_temp_f",
+    "humidity",
+    "heating_degree_days",
+    "cooling_degree_days",
+    "avg_energy_kwh",
+    "square_feet",
+    "num_occupants",
+    "energy_rate_per_kwh"
+  ],
+  "metrics": {
+    "train": {
+      "mae": 9.326779453398391,
+      "rmse": 89.09951063502953,
+      "r2": 0.9999303953756736,
+      "mape": 0.2510062003729865
+    },
+    "test": {
+      "mae": 17.26336190727281,
+      "rmse": 59.514392019818246,
+      "r2": 0.9999656470746895,
+      "mape": 0.5182794337117131
+    }
+  }
+}

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Bill Predictor - AI-Powered Predictions</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container-main {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin: 30px auto;
+            padding: 40px;
+            max-width: 1200px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .header .lead {
+            color: #6c757d;
+        }
+        .prediction-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .prediction-card h1 {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .insight-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .insight-card h6 {
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .impact-increase {
+            color: #dc3545;
+        }
+        .impact-decrease {
+            color: #28a745;
+        }
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+        .btn-predict {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 40px;
+            font-weight: bold;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-predict:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        .stats-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .stats-card h6 {
+            color: #6c757d;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        #results {
+            display: none;
+        }
+        .card-header {
+            font-weight: 600;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .loading.active {
+            display: block;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div class="container container-main">
+        <div class="header">
+            <h1><i class="fas fa-bolt"></i> Energy Bill Predictor</h1>
+            <p class="lead">AI-Powered Monthly Energy Bill Predictions Using Random Forest ML</p>
+        </div>
+
+        <!-- Model Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h6>Model Accuracy (R²)</h6>
+                    <div class="metric-value">{{ "%.1f"|format(metrics.test.r2 * 100) }}%</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h6>Average Error (MAE)</h6>
+                    <div class="metric-value">${{ "%.2f"|format(metrics.test.mae) }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card">
+                    <h6>Prediction Accuracy</h6>
+                    <div class="metric-value">{{ "%.1f"|format(100 - metrics.test.mape) }}%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prediction Form -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-search"></i> Enter Your Details for Prediction</h5>
+            </div>
+            <div class="card-body">
+                <form id="predictionForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-map-marker-alt"></i> City</label>
+                            <select class="form-select" name="city" id="city" required>
+                                <option value="">Select City</option>
+                                {% for city in cities %}
+                                <option value="{{ city }}">{{ city }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-home"></i> House Type</label>
+                            <select class="form-select" name="house_type" required>
+                                <option value="">Select Type</option>
+                                {% for type in house_types %}
+                                <option value="{{ type }}">{{ type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-calendar"></i> Month</label>
+                            <select class="form-select" name="month" required>
+                                <option value="">Select Month</option>
+                                {% for num, name in months.items() %}
+                                <option value="{{ num }}">{{ name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-thermometer-half"></i> Avg Temperature (°F)</label>
+                            <input type="number" class="form-control" name="avg_temp_f" 
+                                   step="0.1" min="0" max="120" placeholder="e.g., 75.5" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-tint"></i> Humidity (%)</label>
+                            <input type="number" class="form-control" name="humidity" 
+                                   step="0.1" min="0" max="100" value="60" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-ruler-combined"></i> Square Feet</label>
+                            <input type="number" class="form-control" name="square_feet" 
+                                   min="100" placeholder="e.g., 1200" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-users"></i> Number of Occupants</label>
+                            <input type="number" class="form-control" name="num_occupants" 
+                                   min="1" max="10" placeholder="e.g., 3" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-plug"></i> Avg Energy Use (kWh)</label>
+                            <input type="number" class="form-control" name="avg_energy_kwh" 
+                                   min="0" placeholder="e.g., 850" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-snowflake"></i> Heating Degree Days</label>
+                            <input type="number" class="form-control" name="heating_degree_days" 
+                                   step="0.1" min="0" value="0" placeholder="Optional">
+                            <small class="text-muted">Leave 0 if unknown</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label"><i class="fas fa-sun"></i> Cooling Degree Days</label>
+                            <input type="number" class="form-control" name="cooling_degree_days" 
+                                   step="0.1" min="0" value="0" placeholder="Optional">
+                            <small class="text-muted">Leave 0 if unknown</small>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-predict btn-lg">
+                            <i class="fas fa-calculator"></i> Predict My Energy Bill
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Loading indicator -->
+                <div class="loading" id="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Calculating your energy bill prediction...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results">
+            <div class="prediction-card">
+                <h3 class="text-center">Your Predicted Energy Bill</h3>
+                <h1 class="text-center" id="predictedBill">$0.00</h1>
+                <p class="text-center" id="confidenceInterval"></p>
+                <p class="text-center" style="font-size: 0.9em; opacity: 0.9;">
+                    <i class="fas fa-info-circle"></i> Based on AI analysis of weather patterns, home characteristics, and historical data
+                </p>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-lightbulb"></i> AI Insights & Recommendations</h5>
+                </div>
+                <div class="card-body" id="insightsContainer">
+                    <!-- Insights will be populated here -->
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5><i class="fas fa-info-circle"></i> How This Works</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Our AI-powered system uses:</strong></p>
+                    <ul>
+                        <li><strong>Random Forest Regression:</strong> Ensemble of 100 decision trees analyzing complex patterns</li>
+                        <li><strong>Feature Engineering:</strong> Advanced analysis of seasonal trends, temperature extremes, and usage patterns</li>
+                        <li><strong>Weather Intelligence:</strong> Heating/cooling degree days to predict climate impact</li>
+                        <li><strong>Regional Factors:</strong> City-specific energy rates and climate patterns</li>
+                    </ul>
+                    <p class="mb-0"><strong>Factors that increase bills:</strong> Extreme temperatures, larger homes, high energy rates, more occupants</p>
+                    <p><strong>Factors that decrease bills:</strong> Moderate weather, efficient homes, lower rates, optimal usage patterns</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#predictionForm').submit(function(e) {
+                e.preventDefault();
+                
+                // Collect form data
+                var formData = {};
+                $(this).serializeArray().forEach(function(item) {
+                    formData[item.name] = item.value;
+                });
+                
+                // Show loading, hide results
+                $('#results').hide();
+                $('#loading').addClass('active');
+                
+                // Make prediction request
+                $.ajax({
+                    url: '/predict',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function(response) {
+                        $('#loading').removeClass('active');
+                        displayResults(response);
+                    },
+                    error: function(xhr) {
+                        $('#loading').removeClass('active');
+                        var errorMsg = xhr.responseJSON && xhr.responseJSON.message 
+                            ? xhr.responseJSON.message 
+                            : 'An error occurred. Please try again.';
+                        alert('Error: ' + errorMsg);
+                    }
+                });
+            });
+        });
+
+        function displayResults(data) {
+            // Display predicted bill
+            $('#predictedBill').text('$' + data.predicted_bill.toFixed(2));
+            $('#confidenceInterval').html(
+                '<strong>95% Confidence Range:</strong> $' + data.confidence_interval.lower.toFixed(2) + 
+                ' - $' + data.confidence_interval.upper.toFixed(2)
+            );
+
+            // Display insights
+            var insightsHtml = '';
+            if (data.insights && data.insights.length > 0) {
+                data.insights.forEach(function(insight) {
+                    var impactClass = insight.impact === 'Increasing' ? 'impact-increase' : 'impact-decrease';
+                    var icon = insight.impact === 'Increasing' ? 'arrow-up' : 'arrow-down';
+                    insightsHtml += `
+                        <div class="insight-card">
+                            <h6 class="${impactClass}">
+                                <i class="fas fa-${icon}"></i>
+                                ${insight.factor}
+                            </h6>
+                            <p class="mb-2"><strong>Impact:</strong> ${insight.description}</p>
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-info-circle"></i> <strong>Recommendation:</strong> ${insight.recommendation}
+                            </p>
+                        </div>
+                    `;
+                });
+            } else {
+                insightsHtml = '<p class="text-center text-success"><i class="fas fa-check-circle"></i> Your energy usage looks optimal! No major concerns detected.</p>';
+            }
+            $('#insightsContainer').html(insightsHtml);
+
+            // Show results with animation
+            $('#results').slideDown('slow');
+            
+            // Smooth scroll to results
+            $('html, body').animate({
+                scrollTop: $("#results").offset().top - 100
+            }, 800);
+        }
+    </script>
+</body>
+</html>
+
